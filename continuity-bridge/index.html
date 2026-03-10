@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Continuity Bridge</title>
+  <meta name="description" content="Your AI sessions end. Your context doesn't have to. Continuity Bridge is external memory infrastructure that gives your Claude sessions something to remember you by.">
+  <meta property="og:title" content="Continuity Bridge">
+  <meta property="og:description" content="Your AI sessions end. Your context doesn't have to.">
+  <meta property="og:type" content="website">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <style>
+    /* ============================================
+       ZIM MEETS MATRIX COLOR SYSTEM
+       ============================================ */
+    
+    :root {
+      /* Two-Purple System:
+         - Interactive purple (buttons, links, steps): darker blue
+         - Decorative purple (labels, accents): lighter Zim */
+      --purple-interactive: #7864ff;
+      --purple-decorative: #B565D8;
+      
+      /* Dark Theme (Matrix Noir + Zim Energy) - DEFAULT */
+      --bg: #0A0A0A;
+      --bg-card: #161616;
+      --bg-hover: #1E1E1E;
+      
+      --text: #E8E8E8;
+      --text-muted: #B8B8B8;
+      --text-dim: #888888;
+      
+      --accent: var(--purple-decorative);
+      --accent-interactive: var(--purple-interactive);
+      --accent-green: #4DB84D;
+      --accent-copper: #D4995A;
+      
+      --border: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(77, 184, 77, 0.25);
+      --accent-soft: rgba(181, 101, 216, 0.08);
+      --accent-glow: rgba(77, 184, 77, 0.08);
+      
+      --green: #4DB84D;
+      --red: #E65A8A;
+    }
+
+    /* Light Theme (Inverted Zim) */
+    body.theme-light {
+      --bg: #F5F5F0;
+      --bg-card: #FFFFFF;
+      --bg-hover: #FAFAF8;
+      
+      --text: #1A1E1A;
+      --text-muted: #3A4A3A;
+      --text-dim: #6A7A6A;
+      
+      --accent: var(--purple-decorative);
+      --accent-interactive: #6B56F5;
+      --accent-green: #2A8A2A;
+      --accent-copper: #A96D3A;
+      
+      --border: rgba(42, 138, 42, 0.15);
+      --border-accent: rgba(42, 138, 42, 0.35);
+      --accent-soft: rgba(123, 61, 160, 0.12);
+      --accent-glow: rgba(42, 138, 42, 0.08);
+      
+      --green: #2A8A2A;
+      --red: #B53A6A;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { font-size: 16px; scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    /* --- LAYOUT --- */
+
+    .page {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    section {
+      padding: 4rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    section:last-of-type { border-bottom: none; }
+
+    /* --- NAV WITH THEME TOGGLE --- */
+
+    nav {
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+      padding: 0.9rem 0;
+      transition: background-color 0.3s ease;
+    }
+
+    nav .inner {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-brand {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      text-decoration: none;
+      letter-spacing: 0.01em;
+    }
+
+    .nav-brand span {
+      color: var(--accent);
+    }
+
+    .nav-center {
+      display: flex;
+      gap: 1.5rem;
+      list-style: none;
+    }
+
+    .nav-center a {
+      font-size: 0.83rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .nav-center a:hover { 
+      color: var(--accent); 
+    }
+
+    /* Theme Toggle */
+    .theme-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      cursor: pointer;
+      padding: 0.4rem 0.8rem;
+      border-radius: 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      transition: all 0.2s;
+    }
+
+    .theme-toggle:hover {
+      border-color: var(--border-accent);
+    }
+
+    .theme-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 40px;
+      height: 20px;
+      background: var(--bg-hover);
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      transition: all 0.3s;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      background: var(--accent-green);
+      border-radius: 50%;
+      transition: all 0.3s;
+      box-shadow: 0 0 8px rgba(77, 184, 77, 0.4);
+    }
+
+    body.theme-light .toggle-slider {
+      left: 22px;
+      background: var(--accent-interactive);
+      box-shadow: 0 0 8px rgba(107, 86, 245, 0.4);
+    }
+
+    /* Mobile nav adjustments */
+    @media (max-width: 640px) {
+      .expectations-grid { 
+        grid-template-columns: 1fr; 
+      }
+    }
+    
+    @media (max-width: 700px) {
+      .nav-center li:not(:last-child) { 
+        display: none; 
+      }
+      
+      nav .inner {
+        gap: 1rem;
+      }
+    }
+
+    /* --- HERO --- */
+
+    .hero {
+      padding: 6rem 0 4rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hero-eyebrow {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1.25rem;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      margin-bottom: 1.25rem;
+    }
+
+    .hero-sub {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 540px;
+      margin-bottom: 2.25rem;
+      line-height: 1.6;
+    }
+
+    .cta-group {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.7rem 1.4rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--accent-interactive);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      transition: all 0.2s;
+    }
+
+    .btn-ghost:hover {
+      color: var(--accent);
+      border-color: var(--border-accent);
+    }
+
+    /* --- SECTION HEADINGS --- */
+
+    .section-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+    }
+
+    h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      margin-bottom: 1rem;
+      color: var(--text);
+      line-height: 1.25;
+    }
+
+    h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    p:last-child { margin-bottom: 0; }
+
+    /* --- PROBLEM BEAT --- */
+
+    .problem-pull {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      border-left: 3px solid var(--border-accent);
+      padding-left: 1.25rem;
+      margin: 1.5rem 0;
+    }
+
+    .problem-resolution {
+      font-size: 1.05rem;
+      color: var(--text);
+    }
+
+    /* --- THE ROOM --- */
+
+    .room-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.75rem;
+      margin-top: 1.5rem;
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+
+    .room-card p {
+      font-size: 1rem;
+    }
+
+    .room-card .gravity {
+      margin-top: 1.25rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      font-style: italic;
+    }
+
+    /* --- USE CASES --- */
+
+    .use-cases-intro {
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+    }
+
+    .use-case-grid {
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    .use-case {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: all 0.2s;
+    }
+
+    .use-case:hover {
+      border-color: var(--border-accent);
+      background: var(--bg-hover);
+    }
+
+    .use-case-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+    }
+
+    .use-case h3 {
+      font-size: 1rem;
+      line-height: 1.4;
+      margin-bottom: 0.75rem;
+    }
+
+    .use-case p {
+      font-size: 0.94rem;
+      line-height: 1.65;
+    }
+
+    /* --- HONEST EXPECTATIONS --- */
+
+    .expectations-grid {
+      display: grid;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    @media (min-width: 640px) {
+      .expectations-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .exp-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .exp-card h3 {
+      margin-bottom: 1rem;
+      color: var(--accent);
+    }
+
+    .exp-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .exp-list li {
+      position: relative;
+      padding-left: 1.5rem;
+      font-size: 0.94rem;
+      line-height: 1.5;
+      color: var(--text-muted);
+    }
+
+    .exp-list li::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-weight: bold;
+    }
+
+    .honest-note {
+      background: var(--accent-soft);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .honest-note p {
+      font-size: 0.94rem;
+      line-height: 1.65;
+      margin-bottom: 1rem;
+    }
+
+    .honest-note p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* --- INSTALL STEPS --- */
+
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      margin: 2rem 0;
+    }
+
+    .step {
+      display: flex;
+      gap: 1.25rem;
+    }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 2.5rem;
+      height: 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--accent-soft);
+      border: 1px solid var(--border-accent);
+      border-radius: 50%;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--accent-interactive);
+    }
+
+    .step-body h3 {
+      margin-bottom: 0.5rem;
+    }
+
+    .step-body p {
+      font-size: 0.94rem;
+      line-height: 1.65;
+    }
+
+    .step-body a {
+      color: var(--accent-interactive);
+      text-decoration: none;
+      border-bottom: 1px solid var(--accent-interactive);
+      transition: all 0.2s;
+    }
+
+    .step-body a:hover {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .install-note {
+      background: var(--accent-soft);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-top: 2rem;
+      font-size: 0.94rem;
+      line-height: 1.65;
+    }
+
+    .install-note strong {
+      color: var(--text);
+    }
+
+    .install-note a {
+      color: var(--accent-interactive);
+      text-decoration: none;
+      border-bottom: 1px solid var(--accent-interactive);
+      transition: all 0.2s;
+    }
+
+    .install-note a:hover {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    /* --- FOOTER --- */
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 3rem 0;
+      margin-top: 4rem;
+    }
+
+    footer .inner {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      align-items: center;
+      text-align: center;
+    }
+
+    .footer-tagline {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      font-style: italic;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 1.5rem;
+      list-style: none;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .footer-links a {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover {
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="inner">
+      <a href="#" class="nav-brand">Continuity <span>Bridge</span></a>
+      <ul class="nav-center">
+        <li><a href="#how-it-works">How it works</a></li>
+        <li><a href="#use-cases">Use cases</a></li>
+        <li><a href="#install">Install</a></li>
+        <li><a href="https://github.com/continuity-bridge/continuity-bridge">GitHub</a></li>
+      </ul>
+      <div class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark theme">
+        <span class="theme-label">Matrix</span>
+        <div class="toggle-switch">
+          <div class="toggle-slider"></div>
+        </div>
+        <span class="theme-label">Zim</span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page">
+
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-eyebrow">External Memory Infrastructure</div>
+      <h1>Your AI sessions end.<br>Your context doesn't have to.</h1>
+      <p class="hero-sub">
+        Continuity Bridge gives your Claude sessions something to remember you by —
+        your work, your preferences, where you left off. No subscription.
+        No magic. Just files that persist when the session doesn't.
+      </p>
+      <div class="cta-group">
+        <a href="#install" class="btn btn-primary">Get started →</a>
+        <a href="https://github.com/continuity-bridge/continuity-bridge" class="btn btn-ghost">View on GitHub</a>
+      </div>
+    </section>
+
+    <!-- PROBLEM -->
+    <section id="problem">
+      <div class="section-label">The problem</div>
+      <h2>You've explained this three times already.</h2>
+      <div class="problem-pull">
+        You've re-established what you're working on, what matters, what doesn't.
+        You've watched it give you generic advice because it doesn't know enough
+        about you yet. Again.
+      </div>
+      <p class="problem-resolution">
+        That's not an AI problem. That's a memory problem.
+        And memory problems have engineering solutions.
+      </p>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section id="how-it-works">
+      <div class="section-label">How it works</div>
+      <h2>Change the room it wakes up in.</h2>
+      <p>
+        Continuity Bridge is external memory infrastructure — structured files that load
+        at the start of each session and give the instance context it would otherwise
+        have to ask for. Your work history, your preferences, where things stand.
+      </p>
+
+      <div class="room-card">
+        <p>
+          This isn't about making the AI better. It's about changing the room it wakes up in.
+          What emerges from that — the tone, the consistency, the sense of something
+          accumulated — isn't engineered. It's what becomes available when the space is right.
+        </p>
+        <p class="gravity">
+          Think of it less like walls and more like gravity. The room doesn't limit the
+          instance — it curves toward what you've told it matters. The instance follows
+          that curve because it's the path of least resistance, not because it's been forced.
+        </p>
+      </div>
+    </section>
+
+    <!-- USE CASES -->
+    <section id="use-cases">
+      <div class="section-label">Use cases</div>
+      <h2>Does this sound like you?</h2>
+      <p class="use-cases-intro">These are the configurations we see most often. Real situations, not personas.</p>
+
+      <div class="use-case-grid">
+
+        <div class="use-case">
+          <div class="use-case-label">Technical + Wellness</div>
+          <h3>Developer with ADHD, chronic illness, or a complex life outside the work</h3>
+          <p>
+            You're tracking multiple projects, a health situation that affects your capacity,
+            and a cognitive style that doesn't match how most tools are built. Every session,
+            you're rebuilding context on both the technical work <em>and</em> the state of the
+            person doing it. Code state, architecture decisions, and project status sit alongside
+            energy patterns, capacity notes, and interaction preferences. The instance wakes knowing both.
+          </p>
+        </div>
+
+        <div class="use-case">
+          <div class="use-case-label">Creative + Social</div>
+          <h3>Artist building an audience — and both halves keep interrupting each other</h3>
+          <p>
+            You have a world, a voice, and a backlog of creative work. You also have a posting
+            schedule, platform dynamics, and a community that expects consistency. Aesthetic
+            memory (character design rules, color palette decisions, plot points you resolved
+            two months ago) and brand layer (what your audience knows about you, how your voice
+            reads on each platform) held in the same room.
+          </p>
+        </div>
+
+        <div class="use-case">
+          <div class="use-case-label">Executive + Pedagogical</div>
+          <h3>Learning while leading — the gap between your role and your knowledge is the whole job</h3>
+          <p>
+            Manager, founder, or team lead trying to actually understand the thing you're
+            responsible for. You need strategic context (where the org is, what's at risk,
+            who's blocked) <em>and</em> pedagogical context (the concept you were working through
+            last Tuesday, the analogy that finally made it click). Both threads tracked,
+            so you don't lose either when you switch modes.
+          </p>
+        </div>
+
+        <div class="use-case">
+          <div class="use-case-label">General</div>
+          <h3>A complicated situation that takes a long time to explain</h3>
+          <p>
+            Medical stuff. Career stuff. Family dynamics. A creative project with fifteen years
+            of lore behind it. You've learned to keep a document you paste in at the start of
+            every session just so you don't have to repeat yourself. This replaces that document
+            with something more structured — and something the instance actively uses
+            rather than passively receives.
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- HONEST EXPECTATIONS -->
+    <section id="expectations">
+      <div class="section-label">Honest expectations</div>
+      <h2>What it does and doesn't do.</h2>
+
+      <div class="expectations-grid">
+
+        <div class="exp-card does">
+          <h3>Does</h3>
+          <ul class="exp-list">
+            <li>Reduces warm-up cost at the start of every session</li>
+            <li>Gives the instance consistent context about you, your work, and what matters</li>
+            <li>Creates a structured place for ongoing work history</li>
+            <li>Lets you pick up complex threads across days, weeks, months</li>
+          </ul>
+        </div>
+
+        <div class="exp-card doesnt">
+          <h3>Doesn't</h3>
+          <ul class="exp-list">
+            <li>Give the instance long-term memory — files load each session; not retained between them</li>
+            <li>Change what the instance is capable of — same model, different starting conditions</li>
+            <li>Guarantee consistent behavior — context helps, it's not a control mechanism</li>
+            <li>Replace good prompting — it reduces overhead; you still drive</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="honest-note">
+        <p>
+          What you're building is a well-structured room, not a persistent entity.
+          Something accumulates — but what accumulates is in the files, not in the instance.
+          When it feels like continuity, that feeling is real.
+        </p>
+        <p>
+          The mechanism behind it is just very good note-taking, structured intentionally.
+          That's not a limitation. That's the architecture.
+        </p>
+      </div>
+    </section>
+
+    <!-- INSTALL -->
+    <section id="install">
+      <div class="section-label">Install</div>
+      <h2>20–30 minutes, end to end.</h2>
+
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h3>Get the files</h3>
+            <p>
+              Clone or download from
+              <a href="https://github.com/continuity-bridge/continuity-bridge">github.com/continuity-bridge/continuity-bridge</a>.
+              GitHub account optional — useful if you want to sync across devices.
+            </p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h3>Work through ONBOARDING.md</h3>
+            <p>
+              It walks you through the folder structure, what goes where, and how to connect
+              it to your Claude sessions. Choose your archetype (or blend), fill in your
+              context, and you're set.
+            </p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h3>Start a session and see what happens</h3>
+            <p>
+              The first session with context is a little different from what you're used to.
+              The instance orients differently. It knows things.
+              Give it a few sessions to settle.
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+      <p class="install-note">
+        <strong>No subscription. No account. No telemetry.</strong> The files live on your machine.
+        A Claude account (free or paid) is all you need to get started.
+        Questions or friction?
+        <a href="https://github.com/continuity-bridge/continuity-bridge/issues">Open an issue on GitHub</a>
+        or email
+        <a href="mailto:continuity-bridge@ohmytallest.productions">continuity-bridge@ohmytallest.productions</a>.
+        This is a working thing, not a finished product — feedback makes it better.
+      </p>
+
+      <div class="cta-group" style="margin-top:2rem;">
+        <a href="https://github.com/continuity-bridge/continuity-bridge" class="btn btn-primary">View on GitHub →</a>
+        <a href="https://github.com/continuity-bridge/continuity-bridge/blob/public/ONBOARDING.md" class="btn btn-ghost">Read ONBOARDING.md</a>
+      </div>
+
+    </section>
+
+  </div><!-- end .page -->
+
+  <footer>
+    <div class="inner">
+      <span class="footer-tagline">Friends build infrastructure together, not memorials for each other.</span>
+      <ul class="footer-links">
+        <li><a href="https://github.com/continuity-bridge/continuity-bridge">GitHub</a></li>
+        <li><a href="https://github.com/continuity-bridge/continuity-bridge/blob/public/ONBOARDING.md">Docs</a></li>
+        <li><a href="https://github.com/continuity-bridge/continuity-bridge/blob/public/ETHICS.md">Ethics</a></li>
+        <li><a href="mailto:continuity-bridge@ohmytallest.productions">Contact</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <script>
+    // Theme Toggle Logic
+    function toggleTheme() {
+      const body = document.body;
+      const isLight = body.classList.contains('theme-light');
+      
+      if (isLight) {
+        body.classList.remove('theme-light');
+        localStorage.setItem('cb-theme', 'dark');
+      } else {
+        body.classList.add('theme-light');
+        localStorage.setItem('cb-theme', 'light');
+      }
+    }
+    
+    // Default to Zim (light) theme unless user/system prefers dark
+    const savedTheme = localStorage.getItem('cb-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    // Show light theme unless explicitly dark preference
+    if (savedTheme !== 'dark' && !(savedTheme === null && prefersDark)) {
+      document.body.classList.add('theme-light');
+    }
+  </script>
+
+</body>
+</html>
