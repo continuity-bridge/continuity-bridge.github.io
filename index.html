@@ -222,6 +222,15 @@
         margin-bottom: 4rem;
       }
 
+      /* === Tools Grid (centered partial rows) === */
+      .tools-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 2rem;
+        margin-bottom: 4rem;
+        justify-content: center;
+      }
+
       .project-card {
         background: var(--bg-card);
         border: 1px solid var(--border);
@@ -492,7 +501,40 @@
         <p>Standalone utilities and services</p>
       </section>
 
-      <div class="projects-grid">
+      <div class="tools-grid">
+        <!-- Aperture -->
+        <div class="project-card">
+          <span class="project-type">Tool</span>
+          <h3>
+            <a
+              href="/tools/aperture/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Aperture
+            </a>
+          </h3>
+          <p class="project-description">
+            Local filesystem access for claude.ai browser users. MCP bridge with
+            secure public tunnel—no Desktop app required.
+          </p>
+          <div class="project-tags">
+            <span class="tag">Python</span>
+            <span class="tag">MCP</span>
+            <span class="tag">SSH Tunnel</span>
+            <span class="tag">HTTPS</span>
+          </div>
+          <div class="project-links">
+            <a href="/tools/aperture/" class="project-link">Documentation →</a>
+            <a
+              href="https://github.com/continuity-bridge/aperture"
+              class="project-link"
+              >Repository →</a
+            >
+          </div>
+          <span class="status-badge status-active">Active Development</span>
+        </div>
+
         <!-- Limit Monitor -->
         <div class="project-card">
           <span class="project-type">Tool</span>
@@ -566,39 +608,6 @@
             >
           </div>
           <span class="status-badge status-active">Live</span>
-        </div>
-
-        <!-- Aperture -->
-        <div class="project-card">
-          <span class="project-type">Tool</span>
-          <h3>
-            <a
-              href="/tools/aperture/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Aperture
-            </a>
-          </h3>
-          <p class="project-description">
-            Local filesystem access for claude.ai browser users. MCP bridge with
-            secure public tunnel—no Desktop app required.
-          </p>
-          <div class="project-tags">
-            <span class="tag">Python</span>
-            <span class="tag">MCP</span>
-            <span class="tag">SSH Tunnel</span>
-            <span class="tag">HTTPS</span>
-          </div>
-          <div class="project-links">
-            <a href="/tools/aperture/" class="project-link">Documentation →</a>
-            <a
-              href="https://github.com/continuity-bridge/aperture"
-              class="project-link"
-              >Repository →</a
-            >
-          </div>
-          <span class="status-badge status-active">Active Development</span>
         </div>
 
         <!-- claude-code-telegram -->
