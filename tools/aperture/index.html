@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aperture - Local Filesystem Access for claude.ai</title>
+    <meta
+      name="description"
+      content="Local filesystem access for claude.ai browser users. MCP bridge with secure public tunnel."
+    />
+
+    <style>
+      /* === CSS Variables === */
+      :root {
+        /* Purple System */
+        --purple-interactive: #7864ff;
+        --purple-decorative: #b565d8;
+
+        /* Dark Theme (Matrix Noir) - Base CSS */
+        --bg: #0a0a0a;
+        --bg-card: #161616;
+        --bg-hover: #1e1e1e;
+        --text: #e8e8e8;
+        --text-muted: #b8b8b8;
+        --text-dim: #888888;
+        --accent-green: #4db84d;
+        --border: rgba(255, 255, 255, 0.08);
+      }
+
+      /* Light Theme (Inverted Zim) - DEFAULT via JavaScript */
+      .theme-light {
+        --bg: #f5f5f0;
+        --bg-card: #ffffff;
+        --bg-hover: #f0f0eb;
+        --text: #1a1e1a;
+        --text-muted: #3a4a3a;
+        --text-dim: #5a6a5a;
+        --accent-green: #2a8a2a;
+        --border: rgba(0, 0, 0, 0.1);
+      }
+
+      /* === Base Styles === */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+          Cantarell, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+        transition:
+          background-color 0.3s ease,
+          color 0.3s ease;
+      }
+
+      /* === Header & Navigation === */
+      header {
+        background: var(--bg-card);
+        border-bottom: 1px solid var(--border);
+        padding: 1rem 2rem;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        transition: background-color 0.3s ease;
+      }
+
+      nav {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .nav-brand {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--text);
+        text-decoration: none;
+      }
+
+      .nav-brand .bridge {
+        color: var(--purple-decorative);
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 2rem;
+        align-items: center;
+      }
+
+      .nav-links a {
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: color 0.2s ease;
+      }
+
+      .nav-links a:hover {
+        color: var(--purple-decorative);
+      }
+
+      /* === Theme Toggle === */
+      .theme-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        padding: 0.5rem 1rem;
+        background: var(--bg-hover);
+        border: 1px solid var(--border);
+        border-radius: 2rem;
+        transition: all 0.2s ease;
+      }
+
+      .theme-toggle:hover {
+        background: var(--bg-card);
+        border-color: var(--purple-interactive);
+      }
+
+      .theme-label {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        user-select: none;
+      }
+
+      .toggle-slider {
+        position: relative;
+        width: 2.5rem;
+        height: 1.25rem;
+        background: var(--accent-green);
+        border-radius: 1rem;
+        transition: background 0.3s ease;
+      }
+
+      .theme-light .toggle-slider {
+        background: var(--purple-interactive);
+      }
+
+      .toggle-slider::before {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 1rem;
+        height: 1rem;
+        background: white;
+        border-radius: 50%;
+        transition: transform 0.3s ease;
+      }
+
+      .theme-light .toggle-slider::before {
+        transform: translateX(1.25rem);
+      }
+
+      /* === Main Content === */
+      main {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 3rem 2rem;
+      }
+
+      /* === Hero Section === */
+      .hero {
+        text-align: center;
+        padding: 2rem 0 3rem 0;
+        margin-bottom: 3rem;
+      }
+
+      .hero h1 {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        color: var(--text);
+      }
+
+      .hero .description {
+        font-size: 1.125rem;
+        color: var(--text-muted);
+        max-width: 700px;
+        margin: 0 auto;
+        line-height: 1.8;
+      }
+
+      /* === Section Headers === */
+      .section-header {
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+
+      .section-header h2 {
+        font-size: 1.75rem;
+        margin-bottom: 0.5rem;
+        color: var(--text);
+      }
+
+      .section-header p {
+        color: var(--text-muted);
+        font-size: 1rem;
+      }
+
+      /* === Info Card === */
+      .info-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        padding: 2rem;
+        margin-bottom: 2rem;
+      }
+
+      .info-card h3 {
+        font-size: 1.25rem;
+        color: var(--text);
+        margin-bottom: 1rem;
+      }
+
+      .info-card p,
+      .info-card li {
+        color: var(--text-muted);
+        margin-bottom: 0.75rem;
+      }
+
+      .info-card ul {
+        margin-left: 1.5rem;
+        margin-top: 1rem;
+      }
+
+      .info-card li {
+        margin-bottom: 0.5rem;
+      }
+
+      /* === Tags === */
+      .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin: 1.5rem 0;
+      }
+
+      .tag {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        background: var(--bg-hover);
+        padding: 0.25rem 0.75rem;
+        border-radius: 0.25rem;
+        border: 1px solid var(--border);
+      }
+
+      /* === Links === */
+      .project-links {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-top: 1.5rem;
+      }
+
+      .project-link {
+        color: var(--purple-interactive);
+        text-decoration: none;
+        font-size: 0.875rem;
+        transition: color 0.2s ease;
+      }
+
+      .project-link:hover {
+        color: var(--purple-decorative);
+      }
+
+      .status-badge {
+        display: inline-block;
+        font-size: 0.75rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 0.25rem;
+        margin-top: 1rem;
+      }
+
+      .status-active {
+        background: rgba(77, 184, 77, 0.15);
+        color: var(--accent-green);
+        border: 1px solid var(--accent-green);
+      }
+
+      /* === Footer === */
+      footer {
+        background: var(--bg-card);
+        border-top: 1px solid var(--border);
+        padding: 2rem;
+        margin-top: 4rem;
+        text-align: center;
+        color: var(--text-muted);
+      }
+
+      footer a {
+        color: var(--purple-interactive);
+        text-decoration: none;
+        transition: color 0.2s ease;
+      }
+
+      footer a:hover {
+        color: var(--purple-decorative);
+      }
+
+      /* === Responsive === */
+      @media (max-width: 768px) {
+        .hero h1 {
+          font-size: 1.75rem;
+        }
+
+        .nav-links {
+          gap: 1rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <nav>
+        <a href="/" class="nav-brand">
+          Continuity <span class="bridge">Bridge</span>
+        </a>
+        <div class="nav-links">
+          <a href="/" target="_blank" rel="noopener noreferrer">Home</a>
+          <a
+            href="https://github.com/continuity-bridge"
+            target="_blank"
+            rel="noopener noreferrer"
+            >GitHub</a
+          >
+          <div class="theme-toggle" id="themeToggle">
+            <span class="theme-label">Matrix</span>
+            <div class="toggle-slider"></div>
+            <span class="theme-label">Zim</span>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <h1>Aperture</h1>
+        <p class="description">
+          Local filesystem access for claude.ai browser users. Aperture runs a
+          local MCP bridge with secure public tunnel, giving Claude desktop
+          app-like file access without installation.
+        </p>
+      </section>
+
+      <div class="info-card">
+        <h3>What It Does</h3>
+        <p>
+          The Claude Desktop app can read and write your local files through MCP
+          filesystem tools. If you use claude.ai in a browser tab, you don't get
+          those tools by default.
+        </p>
+        <p>
+          Aperture fixes that by running a local bridge on your computer and
+          exposing it to claude.ai via a secure public tunnel. No Desktop app
+          required.
+        </p>
+        <div class="tags">
+          <span class="tag">Python</span>
+          <span class="tag">MCP</span>
+          <span class="tag">SSH Tunnel</span>
+          <span class="tag">HTTPS</span>
+          <span class="tag">Flask</span>
+        </div>
+        <span class="status-badge status-active">Active Development</span>
+      </div>
+
+      <div class="info-card">
+        <h3>How It Works</h3>
+        <p>
+          <code
+            >claude.ai (browser) → HTTPS → Serveo tunnel → Aperture MCP server →
+            Your filesystem</code
+          >
+        </p>
+        <p>Three components run on your machine:</p>
+        <ul>
+          <li>
+            <strong>aperture.py</strong> — HTTP bridge on localhost:8765,
+            handles filesystem operations
+          </li>
+          <li>
+            <strong>aperture-mcp-server.py</strong> — MCP SSE server on
+            localhost:10000, translates MCP protocol to bridge calls
+          </li>
+          <li>
+            <strong>Serveo tunnel</strong> — SSH-based tunnel, gives claude.ai a
+            public HTTPS URL to reach your machine
+          </li>
+        </ul>
+        <p>
+          Claude gets seven filesystem tools: read_file, write_file,
+          list_directory, create_directory, move_file, get_file_info,
+          list_allowed_directories.
+        </p>
+        <p>
+          <strong>Security:</strong> localhost-only bridge, session tokens,
+          explicit directory allowlist. You control exactly what Claude can
+          access.
+        </p>
+      </div>
+
+      <div class="info-card">
+        <h3>Quick Start</h3>
+        <p>Installation is automated and takes 2-3 minutes:</p>
+        <pre
+          style="
+            background: var(--bg-hover);
+            padding: 1rem;
+            border-radius: 0.25rem;
+            overflow-x: auto;
+          "
+        ><code>bash install-aperture.sh</code></pre>
+        <p>
+          The installer handles everything: dependency checks, Python packages,
+          directory setup, subdomain configuration, and optional systemd
+          autostart.
+        </p>
+        <p>After installation, use aperture-start.sh to manage the service:</p>
+        <ul>
+          <li>
+            <code>aperture-start.sh</code> — Start (reads config from
+            ~/.aperture.conf)
+          </li>
+          <li>
+            <code>aperture-start.sh --status</code> — Check status and get
+            connector URL
+          </li>
+          <li><code>aperture-start.sh --stop</code> — Stop all processes</li>
+        </ul>
+      </div>
+
+      <div class="project-links">
+        <a
+          href="https://github.com/continuity-bridge/aperture"
+          class="project-link"
+          >Repository →</a
+        >
+        <a
+          href="https://github.com/continuity-bridge/aperture#readme"
+          class="project-link"
+          >Full Documentation →</a
+        >
+      </div>
+    </main>
+
+    <footer>
+      <p>
+        <a href="https://github.com/continuity-bridge/aperture">Aperture</a> |
+        <a href="https://github.com/continuity-bridge"
+          >Continuity Bridge Organization</a
+        >
+      </p>
+    </footer>
+
+    <script>
+      // Theme Toggle Logic
+      const toggle = document.getElementById('themeToggle');
+      const body = document.body;
+
+      // Check for saved theme preference or default to light (Zim)
+      const currentTheme = localStorage.getItem('cb-theme') || 'light';
+
+      // Apply theme on load
+      if (currentTheme === 'light') {
+        body.classList.add('theme-light');
+      }
+
+      // Toggle theme on click
+      toggle.addEventListener('click', () => {
+        body.classList.toggle('theme-light');
+
+        const theme = body.classList.contains('theme-light') ? 'light' : 'dark';
+        localStorage.setItem('cb-theme', theme);
+      });
+    </script>
+  </body>
+</html>

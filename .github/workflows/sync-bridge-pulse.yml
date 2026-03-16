@@ -1,0 +1,59 @@
+name: Sync Bridge Pulse Data
+
+on:
+  schedule:
+    # Run every 5 minutes to stay in sync with bridge-pulse updates
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  sync-pulse:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout continuity-bridge.github.io
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Fetch bridge-pulse gh-pages
+        run: |
+          # Clone bridge-pulse and get gh-pages branch
+          cd /tmp
+          git clone --depth 1 --branch gh-pages https://github.com/continuity-bridge/bridge-pulse.git bridge-pulse-pages
+
+          # Copy pulse.json and index.html to the destination
+          mkdir -p $GITHUB_WORKSPACE/tools/bridge-pulse
+          cp /tmp/bridge-pulse-pages/pulse.json $GITHUB_WORKSPACE/tools/bridge-pulse/
+          cp /tmp/bridge-pulse-pages/index.html $GITHUB_WORKSPACE/tools/bridge-pulse/
+
+          # Verify files were copied
+          ls -la $GITHUB_WORKSPACE/tools/bridge-pulse/
+
+      - name: Check for changes
+        id: check-diff
+        run: |
+          if git diff --quiet tools/bridge-pulse/; then
+            echo "has-changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has-changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push if changed
+        if: steps.check-diff.outputs.has-changes == 'true'
+        run: |
+          git add tools/bridge-pulse/pulse.json tools/bridge-pulse/index.html
+          git commit -m "chore: sync bridge-pulse data from gh-pages"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
